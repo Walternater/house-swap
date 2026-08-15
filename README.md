@@ -31,6 +31,14 @@ python3 skills/house-analyze/scripts/house_analyze.py --help
 - 财务数据仅存 localStorage，可"一键清除"
 - 示例数据已脱敏（假 ID/假小区/价格扰动）
 
+## 采集 → 分析（数据链路）
+
+- **house-scrape（采集）**：个人自用技能，**不进本仓库**（合规）。从链家/贝壳抓取房源，输出 JSON。
+- **house-analyze（分析）**：本仓库 `skills/house-analyze`，消费房源 JSON + `config/user_profile.json` 产出决策包。
+- **格式契约**：两端通过 `skills/house-analyze/references/schema.md` 解耦（字段与 `web/engine.js` 读取对齐）。
+- **衔接步骤**：采集输出 → 按 schema 归一化 → 组装 `data/input.json` → 跑分析。示例见 schema.md §5。
+- 采集合规边界、导入步骤、脱敏要求：见 `docs/faq.md`。
+
 ## 政策口径
 
 - 利率/首付/税费见 config/policy.json（带更新日期+来源）
