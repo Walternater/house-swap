@@ -10,7 +10,7 @@
 
 ## 快速开始（非程序员）
 
-1. 下载本仓库（或打开 GitHub Pages 在线版）
+1. 下载本仓库（或打开在线版：Cloudflare Pages / GitHub Pages，见 docs/cloudflare-deploy.md）
 2. 打开 web/index.html
 3. 按 6 步向导填：卖房信息 → 财务 → 目标偏好 → 看结果
 4. 点"导出报告"打印或存 PDF
