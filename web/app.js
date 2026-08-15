@@ -117,7 +117,11 @@ function renderResult() {
     html += '<div class="card"><h3>🧭 三方案（预算 ' + state.target.budget + '万）</h3><table><tr><th>方案</th><th>总价</th><th>首付</th><th>月供</th><th>占可支配</th></tr>' +
       Object.entries(plans).map(([k,v]) => '<tr><td>' + k + '</td><td>' + v.price + '万</td><td>' + v.down + '万</td><td>' + fmtW(v.monthly) + '</td><td>' + v.ratio + '%</td></tr>').join("") + '</table></div>';
     if (state.houses.length) {
-      const scored = state.houses.map(h => Object.assign({}, h, { unit: h.price*10000/h.area }, compositeScore(h))).sort((a,b)=>b.composite-a.composite);
+      const scored = state.houses.map(h => compositeScore({
+        ...h, avgUnit: h.avg, unit: h.price && h.area ? Math.round(h.price*10000/h.area) : 0,
+        elevator: h.lift, metroM: h.metro, layout: h.hx,
+        orient: h.orient||"", structure: h.structure||"", parking: h.parking||"", listDays: h.listDays
+      })).map((s,i) => Object.assign({}, state.houses[i], s)).sort((a,b)=>b.composite-a.composite);
       html += '<div class="card"><h3>🏠 候选房源双评分</h3><table><tr><th>小区</th><th>户型/面积</th><th>总价</th><th>市场</th><th>适配</th><th>综合</th></tr>' +
         scored.map(h => '<tr><td>' + h.xq + '</td><td>' + h.hx + '/' + h.area + '㎡</td><td>' + h.price + '万</td><td><span class="score-badge blue">' + h.market + '</span></td><td><span class="score-badge orange">' + h.fit + '</span></td><td><span class="score-badge green">' + h.composite + '</span></td></tr>').join("") + '</table></div>';
     }

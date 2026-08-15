@@ -87,7 +87,7 @@ def finance_calc(u, policy):
         down = target * policy["首付"]["首套"]
         fee = target * 0.02
         total_need = u["creditTotal"] + down + fee
-        rows[target] = {"down": round(down), "fee": round(fee), "totalNeed": round(total_need), "gap": round(total_need - available)}
+        rows[target] = {"down": down, "fee": fee, "totalNeed": total_need, "gap": round(total_need - available)}
     gjj = _clamp(u.get("gjjMax", 120), 0, 200)
     loan = 255
     gjj_loan = min(gjj, loan)
