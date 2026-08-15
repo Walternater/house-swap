@@ -51,8 +51,8 @@ def pmt(rate_annual, years, principal):
     """
     r = rate_annual / 12
     n = years * 12
-    if r == 0:
-        return principal / n
+    if r == 0 or n <= 0:
+        return principal / n if n > 0 else principal
     return principal * r * (1 + r) ** n / ((1 + r) ** n - 1)
 
 
@@ -93,7 +93,7 @@ def finance_calc(user, policy):
     """
     # 1) 卖房净得
     sell = user["sellPrice"]
-    agent_fee = user.get("agentFee") or 0.015
+    agent_fee = user.get("agentFee") if user.get("agentFee") is not None else 0.015
     tax_vat = user.get("taxVAT") or 0
     tax_income = user.get("taxIncome") or 0
     net = sell - sell * agent_fee - sell * tax_vat - sell * tax_income
@@ -107,7 +107,7 @@ def finance_calc(user, policy):
     for target in (300, 280, 260, 250):
         down = target * down_ratio
         fee = target * 0.02
-        total_need = user["creditTotal"] + down + fee
+        total_need = (user.get("creditTotal") or 0) + down + fee
         rows[target] = {
             "down": down,
             "fee": fee,
@@ -136,7 +136,7 @@ def finance_calc(user, policy):
         "monthlyRatio": round(monthly / disposable * 1000) / 10,
         "keepCreditMonthly": round(keep_credit_monthly),
         "keepCreditRatio": round(keep_credit_monthly / disposable * 1000) / 10,
-        "disposable": disposable,
+        "disposable": round(disposable),
     }
 
 
@@ -151,13 +151,15 @@ def reverse_calc(target_monthly, years, rate, down_ratio):
     ----
     target_monthly : float   目标月供(元)
     years          : int     年限
-    rate           : float   年利率(百分数，如 3.05)
+    rate           : float   年利率（小数，如 0.0305 表示 3.05%；与 JS/engine_py 一致）
     down_ratio     : float   首付比例（如 0.15）
 
     返回
     ----
     {"loan": 元, "price": 元}   精度 ±1 万内
     """
+    if not (target_monthly > 0) or not (years > 0) or not (rate > 0) or not (0 < down_ratio < 1):
+        return {"loan": 0, "price": 0}
     r = rate / 12
     n = years * 12
     k = r * (1 + r) ** n / ((1 + r) ** n - 1)
@@ -188,12 +190,13 @@ def three_plans(budget, finance, user):
     }
     利率口径与 spec §5 一致：3.05%（商贷首套默认）。
     """
-    d = finance["disposable"]
+    d = user.get("disposable") if user and "disposable" in user else finance["disposable"]
+    rate = user.get("rate") if user and "rate" in user else 3.05  # 百分数
     def mk(k):
         price = budget * k
         down = price * 0.15
         loan = price - down
-        m = pmt(0.0305, 30, loan * 10000)
+        m = pmt(rate / 100, 30, loan * 10000)
         return {
             "price": round(price),
             "down": round(down),

@@ -7,11 +7,12 @@ house-swap 决策引擎 (Python 实现) · 与 docs/决策引擎-spec.md 唯一�
 import json
 
 def pmt(rate_annual, years, principal):
-    """等额本息月供; 利率=0 → 等额本金"""
+    """等额本息月供; 利率=0 或 n<=0 → 等额本金降级（spec §6）
+    rate_annual: 年利率（小数，如 0.0305 表示 3.05%）；百分数需 /100 后传入"""
     r = rate_annual / 12
     n = years * 12
-    if r == 0:
-        return principal / n
+    if r == 0 or n <= 0:
+        return principal / n if n > 0 else principal
     return principal * r * (1 + r) ** n / ((1 + r) ** n - 1)
 
 def _clamp(x, lo, hi):
@@ -29,7 +30,7 @@ def market_score(h):
     y = h.get("years") or ""
     s += 15 if "满五唯一" in y else 11 if "满五" in y else 7 if "满二" in y else 5 if "满" in y else 2
     age = h.get("age")
-    s += 8 if age is None else 15 if age <= 10 else 12 if age <= 20 else 9 if age <= 25 else 6 if age <= 30 else 2
+    s += 6 if age is None else 15 if age <= 10 else 12 if age <= 20 else 9 if age <= 25 else 6 if age <= 30 else 2
     s += 10 if h.get("elevator") == "有" else 4 if h.get("elevator") == "无" else 7
     f = h.get("floor") or ""
     s += 10 if "中" in f else 7 if ("低" in f or "底" in f) else 6 if "高" in f else 3 if "顶" in f else 7
@@ -46,7 +47,7 @@ def fit_score(h, prefs=None):
     p = h.get("price") or 0
     s += 30 if p <= 260 else 27 if p <= 280 else 22 if p <= 300 else 12 if p <= 320 else 5
     m = h.get("metroM")
-    s += 10 if m is None else 20 if m <= 500 else 16 if m <= 1000 else 10 if m <= 2000 else 4
+    s += 4 if m is None else 20 if m <= 500 else 16 if m <= 1000 else 10 if m <= 2000 else 4
     lift, f = h.get("elevator"), h.get("floor") or ""
     if lift == "有":
         s += 15 if "中" in f else 13
@@ -79,14 +80,15 @@ def composite_score(h, prefs=None):
 
 # ---------- 2. 资金测算 ----------
 def finance_calc(u, policy):
-    net = u["sellPrice"] - u["sellPrice"] * u.get("agentFee", 0.015) - u["sellPrice"] * u.get("taxVAT", 0) - u["sellPrice"] * u.get("taxIncome", 0)
+    agent_fee = u.get("agentFee") if u.get("agentFee") is not None else 0.015
+    net = u["sellPrice"] - u["sellPrice"] * agent_fee - u["sellPrice"] * u.get("taxVAT", 0) - u["sellPrice"] * u.get("taxIncome", 0)
     cash_back = net - u["mortgageLeft"]
     available = cash_back + u["cash"]
     rows = {}
     for target in (300, 280, 260, 250):
         down = target * policy["首付"]["首套"]
         fee = target * 0.02
-        total_need = u["creditTotal"] + down + fee
+        total_need = (u.get("creditTotal") or 0) + down + fee
         rows[target] = {"down": down, "fee": fee, "totalNeed": total_need, "gap": round(total_need - available)}
     gjj = _clamp(u.get("gjjMax", 120), 0, 200)
     loan = 255
@@ -116,6 +118,9 @@ def feasibility_index(f, u):
 
 # ---------- 4. 反向计算 ----------
 def reverse_calc(target_monthly, years, rate, down_ratio):
+    # 守卫: 月供>0, 年限>0, 利率>0, 首付比例 (0,1)
+    if not (target_monthly > 0) or not (years > 0) or not (rate > 0) or not (0 < down_ratio < 1):
+        return {"loan": 0, "price": 0}
     r, n = rate / 12, years * 12
     k = r * (1 + r) ** n / ((1 + r) ** n - 1)
     loan = target_monthly / k
@@ -123,13 +128,14 @@ def reverse_calc(target_monthly, years, rate, down_ratio):
     return {"loan": round(loan), "price": round(price)}
 
 # ---------- 5. 三方案 ----------
-def three_plans(budget, f, u):
-    d = u["disposable"] if "disposable" in u else f["disposable"]
+def three_plans(budget, f, u, rate=3.05):
+    # rate: 商贷年利率（百分数，如 3.05 表示 3.05%）；缺省 3.05；与 spec §5 / finance_calc 同源
+    d = u.get("disposable") if u and "disposable" in u else f["disposable"]
     def mk(k):
         price = budget * k
         down = price * 0.15
         loan = price - down
-        m = pmt(0.0305, 30, loan * 10000)
+        m = pmt(rate / 100, 30, loan * 10000)
         return {"price": round(price), "down": round(down), "monthly": round(m), "ratio": round(m / d * 1000) / 10}
     return {"稳健": mk(0.83), "平衡": mk(0.93), "激进": mk(1.0)}
 
@@ -140,6 +146,8 @@ def validate_inputs(inputs):
     if not (inputs.get("incomeAfterTax", 0) > 0): errs.append("月收入必须大于0")
     if inputs.get("mortgageLeft", 0) < 0: errs.append("房贷剩余不能为负")
     if inputs.get("cash", 0) < 0: errs.append("现金不能为负")
+    if inputs.get("creditTotal", 0) < 0: errs.append("信用贷总额必须≥0")
+    if not (inputs.get("incomeAfterTax", 0) > 0): errs.append("月收入必须大于0")
     return errs
 
 if __name__ == "__main__":

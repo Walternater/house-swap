@@ -47,12 +47,18 @@ SAMPLE_HOUSES = [
 ]
 
 
-def _load_json(path, default):
-    """优先读 path，缺省返回内置样例"""
-    if path and os.path.exists(path):
+def _load_json(path, default, label="文件"):
+    """读取 JSON 文件；路径不存在或内容非法时明确报错，不静默回退样例。
+    想用内置样例就不传 path（None）。"""
+    if not path:
+        return default
+    if not os.path.exists(path):
+        raise SystemExit("错误: %s不存在: %s（不传该参数则用内置脱敏样例）" % (label, path))
+    try:
         with open(path, encoding="utf-8") as fp:
             return json.load(fp)
-    return default
+    except json.JSONDecodeError as e:
+        raise SystemExit("错误: %s不是合法 JSON: %s（第 %d 行: %s）" % (label, path, e.lineno, e.msg))
 
 
 def _user(args):

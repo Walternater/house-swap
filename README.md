@@ -41,7 +41,7 @@ python3 skills/house-analyze/scripts/house_analyze.py --help
 
 ## 政策口径
 
-- 利率/首付/税费见 config/policy.json（带更新日期+来源）
+- 利率/首付/税费见 config/policy.example.json（带更新日期+来源；按城市：北京/上海示例）
 - ⚠️ 政策会变：看板显示"政策更新日期"，请以银行/税务面签为准
 
 ## 免责声明

@@ -5,10 +5,10 @@
 
 // ---------- 工具 ----------
 function pmt(rate_annual, years, principal) {
-  // 等额本息月供；r=年利率/12, n=月数；利率=0 → 等额本金降级
+  // 等额本息月供；r=年利率/12, n=月数；利率=0 或 n<=0 → 等额本金降级（spec §6）
   const r = rate_annual / 12;
   const n = years * 12;
-  if (r === 0) return principal / n;
+  if (r === 0 || n <= 0) return n > 0 ? principal / n : principal;
   return principal * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
 }
 function fmtW(x) { return Math.round(x).toLocaleString("zh-CN"); }
@@ -25,7 +25,7 @@ function marketScore(h) {
   const y = h.years || "";
   s += y.includes("满五唯一") ? 15 : y.includes("满五") ? 11 : y.includes("满二") ? 7 : y.includes("满") ? 5 : 2;
   const age = h.age;
-  s += age == null ? 8 : age <= 10 ? 15 : age <= 20 ? 12 : age <= 25 ? 9 : age <= 30 ? 6 : 2;
+  s += age == null ? 6 : age <= 10 ? 15 : age <= 20 ? 12 : age <= 25 ? 9 : age <= 30 ? 6 : 2;
   s += h.elevator === "有" ? 10 : h.elevator === "无" ? 4 : 7;
   const f = h.floor || "";
   s += f.includes("中") ? 10 : (f.includes("低") || f.includes("底")) ? 7 : f.includes("高") ? 6 : f.includes("顶") ? 3 : 7;
@@ -43,7 +43,7 @@ function fitScore(h, prefs) {
   const p = h.price || 0;
   s += p <= 260 ? 30 : p <= 280 ? 27 : p <= 300 ? 22 : p <= 320 ? 12 : 5;
   const m = h.metroM;
-  s += m == null ? 10 : m <= 500 ? 20 : m <= 1000 ? 16 : m <= 2000 ? 10 : 4;
+  s += m == null ? 4 : m <= 500 ? 20 : m <= 1000 ? 16 : m <= 2000 ? 10 : 4;
   const lift = h.elevator, f = h.floor || "";
   if (lift === "有") s += (f.includes("中")) ? 15 : 13;
   else if (lift === "无") s += f.includes("中") ? 10 : (f.includes("低") || f.includes("底")) ? 8 : (f.includes("高") || f.includes("顶")) ? 4 : 8;
@@ -70,14 +70,16 @@ function compositeScore(h, prefs) {
 // ---------- 2. 资金测算 ----------
 function financeCalc(u, policy) {
   // u: 实测财务; policy: 利率/税费
-  const net = u.sellPrice - (u.sellPrice * u.agentFee) - (u.sellPrice * (u.taxVAT || 0)) - (u.sellPrice * (u.taxIncome || 0));
+  const agentFee = u.agentFee != null ? u.agentFee : 0.015;
+  const net = u.sellPrice - (u.sellPrice * agentFee) - (u.sellPrice * (u.taxVAT || 0)) - (u.sellPrice * (u.taxIncome || 0));
   const cashBack = net - u.mortgageLeft;
   const available = cashBack + u.cash;
   const rows = {};
   for (const target of [300, 280, 260, 250]) {
     const down = target * policy.首付.首套;
     const fee = target * 0.02;
-    const totalNeed = u.creditTotal + down + fee;
+    const creditTotal = u.creditTotal || 0;
+    const totalNeed = creditTotal + down + fee;
     rows[target] = { down, fee, totalNeed, gap: Math.round(totalNeed - available) };
   }
   // 置换后月供（信用贷结清后）：公积金+商贷
@@ -94,7 +96,7 @@ function financeCalc(u, policy) {
     monthlyRatio: Math.round(monthly / disposable * 1000) / 10,
     keepCreditMonthly: Math.round(keepCreditMonthly),
     keepCreditRatio: Math.round(keepCreditMonthly / disposable * 1000) / 10,
-    disposable
+    disposable: Math.round(disposable)
   };
 }
 
@@ -113,6 +115,10 @@ function feasibilityIndex(f, u) {
 
 // ---------- 4. 反向计算（E1） ----------
 function reverseCalc(targetMonthly, years, rate, downRatio) {
+  // 守卫: 月供>0, 年限>0, 利率>0, 首付比例 (0,1)
+  if (!(targetMonthly > 0)) return { loan: 0, price: 0 };
+  if (!(years > 0) || !(rate > 0)) return { loan: 0, price: 0 };
+  if (!(downRatio > 0 && downRatio < 1)) return { loan: 0, price: 0 };
   const r = rate / 12, n = years * 12;
   const k = r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
   const loan = targetMonthly / k;          // 元
@@ -121,13 +127,15 @@ function reverseCalc(targetMonthly, years, rate, downRatio) {
 }
 
 // ---------- 5. 三方案（E4） ----------
-function threePlans(budget, f, u) {
-  const d = u.disposable;
+function threePlans(budget, f, u, rate) {
+  // rate: 商贷年利率（百分数，如 3.05 表示 3.05%）；缺省 3.05；与 spec §5 / financeCalc 同源
+  const r = (rate || 3.05) / 100;
+  const d = u.disposable != null ? u.disposable : f.disposable;
   const mk = (k) => {
     const price = budget * k;
     const down = price * 0.15;
     const loan = price - down;
-    const m = pmt(0.0305, 30, loan * 10000);
+    const m = pmt(r, 30, loan * 10000);
     return { price: Math.round(price), down: Math.round(down), monthly: Math.round(m), ratio: Math.round(m / d * 1000) / 10 };
   };
   return { 稳健: mk(0.83), 平衡: mk(0.93), 激进: mk(1.0) };
@@ -140,6 +148,8 @@ function validateInputs(inputs) {
   if (!(inputs.incomeAfterTax > 0)) errs.push("月收入必须大于0");
   if (!(inputs.mortgageLeft >= 0)) errs.push("房贷剩余不能为负");
   if (inputs.cash < 0) errs.push("现金不能为负");
+  if (!(inputs.creditTotal >= 0)) errs.push("信用贷总额必须≥0");
+  if (!(inputs.incomeAfterTax > 0 && inputs.gjjWithdraw >= 0)) errs.push("收入必须大于0");
   return errs;
 }
 

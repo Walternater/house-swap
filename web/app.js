@@ -2,6 +2,10 @@
 "use strict";
 const $ = (id) => document.getElementById(id);
 const STORE_KEY = "houseSwap_v1";
+// HTML 转义（防 XSS：用户输入拼进 innerHTML 前必须过 esc）
+function esc(s) {
+  return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 
 // ---------- 状态 ----------
 let state = { step: 1, houses: [], finance: {}, target: {} };
@@ -54,16 +58,16 @@ function readStep3() {
 // ---------- 房源表单 ----------
 function houseFormHTML(h, i) {
   return '<div class="house-row" data-i="' + i + '">' +
-    '<input class="h-xq" placeholder="小区" value="' + (h.xq||"") + '">' +
-    '<input class="h-hx" placeholder="户型(如2室1厅)" value="' + (h.hx||"") + '">' +
-    '<input class="h-area" type="number" placeholder="面积㎡" value="' + (h.area||"") + '">' +
-    '<input class="h-price" type="number" placeholder="总价(万)" value="' + (h.price||"") + '">' +
-    '<input class="h-avg" type="number" placeholder="小区均价(元/㎡)" value="' + (h.avg||"") + '">' +
-    '<input class="h-floor" placeholder="楼层(中/低/高/顶)" value="' + (h.floor||"") + '">' +
+    '<input class="h-xq" placeholder="小区" value="' + esc(h.xq) + '">' +
+    '<input class="h-hx" placeholder="户型(如2室1厅)" value="' + esc(h.hx) + '">' +
+    '<input class="h-area" type="number" placeholder="面积㎡" value="' + esc(h.area) + '">' +
+    '<input class="h-price" type="number" placeholder="总价(万)" value="' + esc(h.price) + '">' +
+    '<input class="h-avg" type="number" placeholder="小区均价(元/㎡)" value="' + esc(h.avg) + '">' +
+    '<input class="h-floor" placeholder="楼层(中/低/高/顶)" value="' + esc(h.floor) + '">' +
     '<select class="h-lift"><option value="有"'+(h.lift==="有"?" selected":"")+'>电梯</option><option value="无"'+(h.lift==="无"?" selected":"")+'>无电梯</option></select>' +
-    '<input class="h-metro" type="number" placeholder="地铁(米)" value="' + (h.metro||"") + '">' +
+    '<input class="h-metro" type="number" placeholder="地铁(米)" value="' + esc(h.metro) + '">' +
     '<select class="h-years"><option value="满五唯一"'+(h.years==="满五唯一"?" selected":"")+'>满五唯一</option><option value="满五"'+(h.years==="满五"?" selected":"")+'>满五</option><option value="满二"'+(h.years==="满二"?" selected":"")+'>满二</option><option value="未满二"'+(h.years==="未满二"?" selected":"")+'>未满二</option></select>' +
-    '<input class="h-biz" placeholder="商圈(果园/北苑…)" value="' + (h.biz||"") + '">' +
+    '<input class="h-biz" placeholder="商圈(果园/北苑…)" value="' + esc(h.biz) + '">' +
     '<button class="btn ghost del">删除</button></div>';
 }
 function renderHouses() {
@@ -87,7 +91,7 @@ function collectHouses() {
 // ---------- 结果渲染 ----------
 function renderResult() {
   readStep1(); readStep2(); readStep3(); collectHouses(); save();
-  const policy = { 首付: {首套:0.15}, 利率: {公积金首套:2.6, 商贷首套:3.05} };
+  const policy = POLICY;
   const u = Object.assign({
     sellPrice: state.sell.sellPrice, mortgageLeft: state.sell.mortgageLeft,
     agentFee: state.sell.agentFee, taxVAT: 0, taxIncome: 0,
@@ -99,7 +103,7 @@ function renderResult() {
   const errs = validateInputs(u);
   const f = financeCalc(u, policy);
   const idx = feasibilityIndex(f, u);
-  const plans = threePlans(state.target.budget, f, u);
+  const plans = threePlans(state.target.budget, f, u, POLICY.利率.商贷首套);
   let html = "";
   if (errs.length) {
     html += '<div class="card"><h3>⚠️ 请先修正</h3><ul>' + errs.map(e => "<li>" + e + "</li>").join("") + "</ul></div>";
@@ -110,11 +114,11 @@ function renderResult() {
       '<div>' + (idx>=80?"强烈建议换":idx>=60?"可换，需准备":"暂缓") + '</div></div>';
     html += '<div class="card"><h3>💰 资金测算</h3><table><tr><th>新房总价</th><th>首付15%</th><th>税费约2%</th><th>全清信用贷+买入</th><th>缺口</th></tr>' +
       Object.entries(f.rows).map(([k,v]) => '<tr><td>' + k + '万</td><td>' + v.down + '万</td><td>' + v.fee + '万</td><td>' + v.totalNeed + '万</td><td class="' + (v.gap<=0?"gap-ok":"gap-bad") + '">' + v.gap + '万</td></tr>').join("") +
-      '</table><p class="hint">可用资金 = 卖房回笼 ' + fmtW(f.cashBack) + '万 + 现金 ' + u.cash + '万 = ' + fmtW(f.available) + '万</p></div>';
+      '</table><p class="hint">可用资金 = 卖房回笼 ' + fmtW(f.cashBack) + '万 + 现金 ' + esc(u.cash) + '万 = ' + fmtW(f.available) + '万</p></div>';
     html += '<div class="card"><h3>📊 置换后月供（贷255万，信用贷结清）</h3>' +
       '<p><b>' + fmtW(f.monthly) + '</b> 元/月，占可支配 ' + f.monthlyRatio + '%' + (f.monthlyRatio<=30?' ✅':f.monthlyRatio<=40?' ⚠️':' 🔴') + '</p>' +
       '<p class="hint">保留信用贷时：' + fmtW(f.keepCreditMonthly) + ' 元/月，占 ' + f.keepCreditRatio + '%（&gt;40% 审批和生活双压力）</p></div>';
-    html += '<div class="card"><h3>🧭 三方案（预算 ' + state.target.budget + '万）</h3><table><tr><th>方案</th><th>总价</th><th>首付</th><th>月供</th><th>占可支配</th></tr>' +
+    html += '<div class="card"><h3>🧭 三方案（预算 ' + esc(state.target.budget) + '万）</h3><table><tr><th>方案</th><th>总价</th><th>首付</th><th>月供</th><th>占可支配</th></tr>' +
       Object.entries(plans).map(([k,v]) => '<tr><td>' + k + '</td><td>' + v.price + '万</td><td>' + v.down + '万</td><td>' + fmtW(v.monthly) + '</td><td>' + v.ratio + '%</td></tr>').join("") + '</table></div>';
     if (state.houses.length) {
       const scored = state.houses.map(h => compositeScore({
@@ -123,7 +127,7 @@ function renderResult() {
         orient: h.orient||"", structure: h.structure||"", parking: h.parking||"", listDays: h.listDays
       })).map((s,i) => Object.assign({}, state.houses[i], s)).sort((a,b)=>b.composite-a.composite);
       html += '<div class="card"><h3>🏠 候选房源双评分</h3><table><tr><th>小区</th><th>户型/面积</th><th>总价</th><th>市场</th><th>适配</th><th>综合</th></tr>' +
-        scored.map(h => '<tr><td>' + h.xq + '</td><td>' + h.hx + '/' + h.area + '㎡</td><td>' + h.price + '万</td><td><span class="score-badge blue">' + h.market + '</span></td><td><span class="score-badge orange">' + h.fit + '</span></td><td><span class="score-badge green">' + h.composite + '</span></td></tr>').join("") + '</table></div>';
+        scored.map(h => '<tr><td>' + esc(h.xq) + '</td><td>' + esc(h.hx) + '/' + esc(h.area) + '㎡</td><td>' + esc(h.price) + '万</td><td><span class="score-badge blue">' + h.market + '</span></td><td><span class="score-badge orange">' + h.fit + '</span></td><td><span class="score-badge green">' + h.composite + '</span></td></tr>').join("") + '</table></div>';
     }
     html += '<div class="card"><h3>🔁 反向计算（E1）</h3><label>我每月能还（元）<input id="revInput" type="number" placeholder="8000"></label>' +
       '<button class="btn" id="revBtn">反推可买总价</button><p id="revOut"></p></div>';
@@ -135,6 +139,9 @@ function renderResult() {
     $("revOut").textContent = "可贷约 " + fmtW(r.loan) + " 元 → 可买总价约 " + fmtW(r.price) + " 元（" + Math.round(r.price/10000) + "万，首付15%）";
   };
 }
+
+// ---------- 政策（与 config/policy.example.json 对齐；改 policy 必须三处同步 + updated_at） ----------
+const POLICY = { 首付: {首套:0.15, 二套:0.20}, 利率: {公积金首套:2.6, 商贷首套:3.05} };
 
 // ---------- 示例数据（脱敏） ----------
 const SAMPLE_HOUSES = [

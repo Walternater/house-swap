@@ -45,7 +45,7 @@ const CASES = [
   ["市场评分-低配房(未满二/顶楼/北向/塔楼)", 27, 0,
     () => e.marketScore({avgUnit:20000, unit:30000, years:"未满二", age:35, elevator:"无",
       floor:"顶楼层", orient:"北", listDays:200, structure:"塔楼"})],
-  ["市场评分-空对象走默认分支", 52, 0, () => e.marketScore({})],
+  ["市场评分-空对象走默认分支(spec:缺失按最保守)", 50, 0, () => e.marketScore({})],
 
   // 9-10 适配评分（spec §1）
   ["适配评分-高配房", 100, 0, () => e.fitScore(H_ALL)],
@@ -83,8 +83,18 @@ const CASES = [
     () => e.threePlans(300, F, Object.assign({}, U, {disposable:35500}))],
 
   // 20 边界校验（spec §6）
-  ["边界-非法输入报错", ["成交价必须大于0", "月收入必须大于0", "房贷剩余不能为负", "现金不能为负"], 0,
-    () => e.validateInputs({sellPrice:0, incomeAfterTax:0, mortgageLeft:-1, cash:-5})],
+  ["边界-非法输入报错", ["成交价必须大于0", "月收入必须大于0", "房贷剩余不能为负", "现金不能为负", "信用贷总额必须≥0", "收入必须大于0"], 0,
+    () => e.validateInputs({sellPrice:0, incomeAfterTax:0, mortgageLeft:-1, cash:-5, creditTotal:-1})],
+
+  // 21-24 回归：/autoplan 2026-08-15 修复验证
+  ["回归-三方案无disposable回退f", {稳健:25.3}, 0.1,
+    () => ({稳健: e.threePlans(300, F, U).稳健.ratio})],
+  ["回归-pmt n=0 降级等额本金", 2550000, 1,
+    () => Math.round(e.pmt(0.0305, 0, 2550000))],
+  ["回归-reverseCalc 非法输入守卫", {loan:0, price:0}, 0,
+    () => e.reverseCalc(0, 30, 0.0305, 0.15)],
+  ["回归-financeCalc 缺 creditTotal 不 NaN", 45, 1,
+    () => { const f = e.financeCalc(Object.assign({}, U, {creditTotal:undefined}), POLICY); return f.rows[300].down; }],
 ];
 
 let pass = 0;

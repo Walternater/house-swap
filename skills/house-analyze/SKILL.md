@@ -13,16 +13,23 @@ triggers: ["置换分析", "评分", "资金测算", "换房", "house-analyze", 
 - 房源数据：house-scrape 输出 JSON 或手动录入（对齐 docs/决策引擎-spec.md）
 - 财务数据：config/user_profile.json（实测，一次填写全模块复用）
 
-## 能力（CLI 子命令，脚本待共建）
+## 能力（CLI 子命令，全部可用）
+
+```bash
+python3 skills/house-analyze/scripts/house_analyze.py --help
+```
 
 | 子命令 | 功能 | 对应 spec |
 |---|---|---|
-| score | 双评分+点评 | §1 |
+| score | 双评分+TopN 排序 | §1 |
 | finance | 资金缺口情景表+置换后月供 | §2 |
 | risk | 归本炸弹/悖论/DTI/错配检查 | §2/§3 |
-| compare | 排序/画像/Top6 | §1 |
-| report | 决策报告 md/html | — |
+| compare | JS vs Python 双引擎对照 | 全部 |
+| report | 决策报告 md | 全部 |
 | timeline | 90天三阶段+检查表 | — |
+| all | 六模块一条命令跑完 | 全部 |
+
+缺省输入用内置脱敏样例；传 --user/--policy/--houses 指定 JSON 文件。
 
 ## 铁律
 

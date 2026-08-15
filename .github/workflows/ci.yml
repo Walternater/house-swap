@@ -1,0 +1,43 @@
+name: house-swap CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Python 侧 20 组对照测试
+        run: python3 tests/engine_test.py
+      - name: JS 侧 20 组对照测试
+        run: node tests/engine.test.js
+      - name: 双引擎对照（compare.sh）
+        run: bash tests/compare.sh
+      - name: 六模块自测
+        run: |
+          for m in finance risk timeline report; do
+            python3 skills/house-analyze/scripts/$m.py > /dev/null || exit 1
+          done
+      - name: CLI 全链路
+        run: python3 skills/house-analyze/scripts/house_analyze.py all --top 2 > /dev/null
+      - name: policy updated_at 校验
+        run: |
+          python3 - <<'PY'
+          import json, datetime, glob
+          for f in glob.glob("config/policy*.json"):
+              p = json.load(open(f, encoding="utf-8"))
+              up = p.get("updated_at")
+              assert up, f"{f}: 缺 updated_at"
+              datetime.date.fromisoformat(up)
+              assert p.get("来源"), f"{f}: 缺来源"
+          print("policy 校验通过")
+          PY
