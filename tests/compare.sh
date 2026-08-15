@@ -2,7 +2,8 @@
 # JS vs Python 决策引擎对照测试
 # 用法: bash tests/compare.sh
 cd "$(dirname "$0")/.."
-cat > /tmp/hs_compare.js << 'JS'
+ENGINE_JS="/Users/wcf/personal/house-swap/web/engine.js"
+JS_OUT=$(node -e '
 const e = require(process.argv[1]);
 const h = {price:260, avgUnit:29000, unit:26531, years:"满五", age:24, elevator:"有",
   floor:"中楼层", orient:"南", structure:"塔楼", metroM:340, biz:"果园", layout:"2室1厅", area:98};
@@ -13,8 +14,7 @@ const policy = {首付:{首套:0.15}, 利率:{公积金首套:2.6, 商贷首套:
 const s = e.compositeScore(h);
 const f = e.financeCalc(u, policy);
 console.log(JSON.stringify({s, monthly:f.monthly, ratio:f.monthlyRatio, gap300:f.rows[300].gap, idx:e.feasibilityIndex(f,u)}));
-JS
-JS_OUT=$(node /tmp/hs_compare.js /Users/wcf/personal/house-swap/web/engine.js)
+' "$ENGINE_JS")
 PY_OUT=$(python3 -c "
 import sys, json; sys.path.insert(0,'skills/house-analyze/scripts')
 from engine_py import *
