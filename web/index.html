@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>house-swap · 房产置换助手</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <h1>🏠 house-swap · 房产置换助手</h1>
+  <div class="topbar-right">
+    <label>城市 <select id="citySel">
+      <option value="北京">北京</option><option value="上海">上海（示例）</option>
+    </select></label>
+    <button id="clearData" class="btn ghost">清除数据</button>
+  </div>
+</header>
+
+<div class="wizard">
+  <div class="steps">
+    <div class="step-dot active" data-step="1">1 卖房</div>
+    <div class="step-dot" data-step="2">财务</div>
+    <div class="step-dot" data-step="3">目标</div>
+    <div class="step-dot" data-step="4">房源</div>
+    <div class="step-dot" data-step="5">结果</div>
+  </div>
+
+  <!-- 步骤1: 卖房 -->
+  <section class="panel" id="step1">
+    <h2>第一步 · 你的旧房</h2>
+    <div class="grid">
+      <label>预计成交价（万）<input id="sellPrice" type="number" min="0" placeholder="140"></label>
+      <label>房贷剩余（万）<input id="mortgageLeft" type="number" min="0" placeholder="93"></label>
+      <label>中介费率（%）<input id="agentFee" type="number" step="0.1" value="1.5" min="0"></label>
+    </div>
+    <p class="hint">成交价参考同小区近30天成交；中介费 1.5%-2.7% 可谈。</p>
+    <button class="btn next">下一步 →</button>
+  </section>
+
+  <!-- 步骤2: 财务 -->
+  <section class="panel hidden" id="step2">
+    <h2>第二步 · 你的财务</h2>
+    <div class="grid">
+      <label>税后月薪（元）<input id="incomeAfterTax" type="number" min="0" placeholder="27000"></label>
+      <label>公积金月提取（元）<input id="gjjWithdraw" type="number" min="0" placeholder="8500"></label>
+      <label>手头现金（万）<input id="cash" type="number" min="0" placeholder="30"></label>
+      <label>信用贷总额（万）<input id="creditTotal" type="number" min="0" placeholder="80"></label>
+      <label>信用贷月供（元）<input id="creditMonthly" type="number" min="0" placeholder="6868"></label>
+      <label>是否"按年归本再贷"？<select id="revolving"><option value="yes">是（年度归本炸弹）</option><option value="no">否</option></select></label>
+      <label>可再借款能力（万）<input id="borrowPower" type="number" min="0" placeholder="0"></label>
+    </div>
+    <div class="navbtns"><button class="btn ghost prev">← 上一步</button><button class="btn next">下一步 →</button></div>
+  </section>
+
+  <!-- 步骤3: 目标 -->
+  <section class="panel hidden" id="step3">
+    <h2>第三步 · 置换目标</h2>
+    <div class="grid">
+      <label>总预算（万）<input id="budget" type="number" min="0" placeholder="300"></label>
+      <label>偏好区域<input id="regionPref" placeholder="如：通州果园/北苑，朝阳东坝"></label>
+      <label>电梯<select id="liftPref"><option value="yes">必须电梯</option><option value="prefer">优先电梯</option><option value="no">不限</option></select></label>
+      <label>地铁<select id="metroPref"><option value="500">≤500米</option><option value="1000">≤1公里</option><option value="2000">≤2公里</option><option value="any">不限</option></select></label>
+      <label>户型<select id="layoutPref"><option value="2">两居</option><option value="3">三居</option><option value="any">不限</option></select></label>
+    </div>
+    <div class="navbtns"><button class="btn ghost prev">← 上一步</button><button class="btn next">下一步 →</button></div>
+  </section>
+
+  <!-- 步骤4: 房源 -->
+  <section class="panel hidden" id="step4">
+    <h2>第四步 · 候选房源（可手动添加，或载入脱敏示例）</h2>
+    <button id="loadSample" class="btn">📥 载入脱敏示例</button>
+    <button id="addHouse" class="btn ghost">＋ 添加房源</button>
+    <div id="housesForm"></div>
+    <div class="navbtns"><button class="btn ghost prev">← 上一步</button><button class="btn primary" id="calcBtn">🚀 计算结果</button></div>
+  </section>
+
+  <!-- 步骤5: 结果 -->
+  <section class="panel hidden" id="step5">
+    <div id="resultArea"></div>
+    <div class="navbtns">
+      <button class="btn ghost prev">← 上一步</button>
+      <button class="btn" id="printBtn">🖨️ 导出/打印报告</button>
+    </div>
+  </section>
+</div>
+
+<div class="disclaimer">⚠️ 估算参考，不构成建议。政策以银行/税务面签为准。</div>
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
