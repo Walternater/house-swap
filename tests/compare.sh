@@ -27,4 +27,11 @@ print(json.dumps({'s':s,'monthly':f['monthly'],'ratio':f['monthlyRatio'],'gap300
 ")
 echo "JS    : $JS_OUT"
 echo "Python: $PY_OUT"
-if [ "$JS_OUT" = "$PY_OUT" ]; then echo "✅ 双引擎一致"; else echo "❌ 不一致!"; exit 1; fi
+echo "$JS_OUT" > /tmp/hs_js.json
+echo "$PY_OUT" > /tmp/hs_py.json
+python3 -c "
+import json
+a = json.load(open('/tmp/hs_js.json')); b = json.load(open('/tmp/hs_py.json'))
+print('✅ 双引擎一致' if a == b else '❌ 不一致!')
+import sys; sys.exit(0 if a == b else 1)
+"
