@@ -60,6 +60,12 @@ def _clamp(x, lo, hi):
     return max(lo, min(hi, x))
 
 
+def _half_up(x):
+    """与 JS Math.round 完全一致的舍入：floor(x + 0.5) 对所有 x 成立（含负数）"""
+    import math
+    return math.floor(x + 0.5)
+
+
 # ============================================================
 # §2 资金测算
 # ============================================================
@@ -112,10 +118,10 @@ def finance_calc(user, policy):
             "down": down,
             "fee": fee,
             "totalNeed": total_need,
-            "gap": round(total_need - available),
+            "gap": _half_up(total_need - available),
         }
     # 5) 置换后月供：信用贷结清后的公积金 + 商贷组合
-    gjj = _clamp(user.get("gjjMax", 120), 0, 200)
+    gjj = _clamp(user.get("gjjMax") or 120, 0, 200)
     loan = 255  # 300 万房，贷 255 万（与 JS engine.js 同口径）
     gjj_loan = min(gjj, loan)
     shang_loan = max(0, loan - gjj_loan)

@@ -83,7 +83,7 @@ function financeCalc(u, policy) {
     rows[target] = { down, fee, totalNeed, gap: Math.round(totalNeed - available) };
   }
   // 置换后月供（信用贷结清后）：公积金+商贷
-  const gjj = clamp(u.gjjMax || 120, 0, 200);
+  const gjj = clamp(u.gjjMax != null ? u.gjjMax : 120, 0, 200);
   const loan = 255; // 300万房 贷255万
   const gjjLoan = Math.min(gjj, loan);
   const shangLoan = Math.max(0, loan - gjjLoan);

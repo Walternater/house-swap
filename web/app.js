@@ -64,6 +64,7 @@ function houseFormHTML(h, i) {
     '<input class="h-price" type="number" placeholder="总价(万)" value="' + esc(h.price) + '">' +
     '<input class="h-avg" type="number" placeholder="小区均价(元/㎡)" value="' + esc(h.avg) + '">' +
     '<input class="h-floor" placeholder="楼层(中/低/高/顶)" value="' + esc(h.floor) + '">' +
+    '<input class="h-age" type="number" placeholder="楼龄(年,选填)" value="' + esc(h.age || "") + '">' +
     '<select class="h-lift"><option value="有"'+(h.lift==="有"?" selected":"")+'>电梯</option><option value="无"'+(h.lift==="无"?" selected":"")+'>无电梯</option></select>' +
     '<input class="h-metro" type="number" placeholder="地铁(米)" value="' + esc(h.metro) + '">' +
     '<select class="h-years"><option value="满五唯一"'+(h.years==="满五唯一"?" selected":"")+'>满五唯一</option><option value="满五"'+(h.years==="满五"?" selected":"")+'>满五</option><option value="满二"'+(h.years==="满二"?" selected":"")+'>满二</option><option value="未满二"'+(h.years==="未满二"?" selected":"")+'>未满二</option></select>' +
@@ -82,9 +83,13 @@ function collectHouses() {
     xq: r.querySelector(".h-xq").value, hx: r.querySelector(".h-hx").value,
     area: +r.querySelector(".h-area").value, price: +r.querySelector(".h-price").value,
     avg: +r.querySelector(".h-avg").value, floor: r.querySelector(".h-floor").value,
+    age: +r.querySelector(".h-age").value || null,
     lift: r.querySelector(".h-lift").value, metro: +r.querySelector(".h-metro").value,
     years: r.querySelector(".h-years").value, biz: r.querySelector(".h-biz").value,
-    age: 20
+    orient: r.querySelector(".h-orient") ? r.querySelector(".h-orient").value : "",
+    structure: r.querySelector(".h-structure") ? r.querySelector(".h-structure").value : "",
+    parking: r.querySelector(".h-parking") ? r.querySelector(".h-parking").value : "",
+    listDays: r.querySelector(".h-listdays") ? +r.querySelector(".h-listdays").value || null : null
   })).filter(h => h.price > 0);
 }
 
@@ -145,7 +150,7 @@ const POLICY = { 首付: {首套:0.15, 二套:0.20}, 利率: {公积金首套:2.
 
 // ---------- 示例数据（脱敏） ----------
 const SAMPLE_HOUSES = [
-  {xq:"示例·果园A区", hx:"2室1厅", area:98, price:260, avg:29000, floor:"中", lift:"有", metro:340, years:"满五", biz:"果园"},
+  {xq:"示例·果园A区", hx:"2室1厅", area:98, price:260, avg:29000, floor:"中", lift:"有", metro:340, years:"满五", biz:"果园", age:24},
   {xq:"示例·北苑B区", hx:"2室2厅", area:99, price:228, avg:29000, floor:"高", lift:"有", metro:400, years:"满五", biz:"果园"},
   {xq:"示例·梨园C区", hx:"3室1厅", area:100, price:299, avg:32000, floor:"中", lift:"有", metro:100, years:"满五", biz:"梨园"},
   {xq:"示例·东坝D区", hx:"2室1厅", area:66, price:178, avg:29000, floor:"中", lift:"有", metro:1500, years:"满五", biz:"东坝"},

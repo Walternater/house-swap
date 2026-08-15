@@ -18,6 +18,11 @@ def pmt(rate_annual, years, principal):
 def _clamp(x, lo, hi):
     return max(lo, min(hi, x))
 
+def _half_up(x):
+    """与 JS Math.round 完全一致的舍入：floor(x + 0.5) 对所有 x 成立（含负数）"""
+    import math
+    return math.floor(x + 0.5)
+
 # ---------- 1. 双评分 ----------
 def market_score(h):
     s = 0
@@ -89,8 +94,8 @@ def finance_calc(u, policy):
         down = target * policy["首付"]["首套"]
         fee = target * 0.02
         total_need = (u.get("creditTotal") or 0) + down + fee
-        rows[target] = {"down": down, "fee": fee, "totalNeed": total_need, "gap": round(total_need - available)}
-    gjj = _clamp(u.get("gjjMax", 120), 0, 200)
+        rows[target] = {"down": down, "fee": fee, "totalNeed": total_need, "gap": _half_up(total_need - available)}
+    gjj = _clamp(u.get("gjjMax") or 120, 0, 200)
     loan = 255
     gjj_loan = min(gjj, loan)
     shang_loan = max(0, loan - gjj_loan)
@@ -98,7 +103,7 @@ def finance_calc(u, policy):
     disposable = u["incomeAfterTax"] + u["gjjWithdraw"]
     keep = monthly + u.get("creditMonthly", 0)
     return {
-        "net": round(net), "cashBack": round(cash_back), "available": round(available), "rows": rows,
+        "net": net, "cashBack": cash_back, "available": available, "rows": rows,
         "monthly": round(monthly), "monthlyRatio": round(monthly / disposable * 1000) / 10,
         "keepCreditMonthly": round(keep), "keepCreditRatio": round(keep / disposable * 1000) / 10,
         "disposable": round(disposable)

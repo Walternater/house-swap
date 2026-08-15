@@ -197,6 +197,7 @@ def cmd_report(args):
 
 
 def cmd_all(args):
+    failed = []
     for name, fn in [
         ("1/6 双评分 score", cmd_score),
         ("2/6 资金测算 finance", cmd_finance),
@@ -209,8 +210,17 @@ def cmd_all(args):
         print("=" * 20, name, "=" * 20)
         try:
             fn(args)
-        except SystemExit:
-            pass
+        except SystemExit as e:
+            if e.code not in (None, 0):
+                failed.append((name, e.code))
+        except Exception as e:
+            failed.append((name, str(e)))
+    if failed:
+        print()
+        print("❌ %d 个步骤失败:" % len(failed))
+        for name, code in failed:
+            print("  - %s (exit=%s)" % (name, code))
+        raise SystemExit(1)
 
 
 def main():

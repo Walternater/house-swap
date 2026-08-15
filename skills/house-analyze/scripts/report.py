@@ -68,7 +68,7 @@ def build_report(user, policy, houses, top_n=6, today=""):
         key=lambda t: t[0]["composite"], reverse=True,
     )
     g300 = f["rows"][300]["gap"]
-    gjj_loan = min(max(user.get("gjjMax", 120), 0), 255)
+    gjj_loan = min(max(user.get("gjjMax", 120), 0), 200)  # 与 engine.js/engine_py clamp 一致（spec: gjjMax≤200）
     sd_loan = 255 - gjj_loan
     gjj_m = round(pmt(policy["利率"]["公积金首套"] / 100, 30, gjj_loan * 10000))
     sd_m = round(pmt(policy["利率"]["商贷首套"] / 100, 30, sd_loan * 10000))
